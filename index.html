@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory & Invoice Manager</title>
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --success: #16a34a;
+            --danger: #dc2626;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-700: #374151;
+            --text: #1f2937;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: #f8fafc;
+            color: var(--text);
+            padding-bottom: 60px; /* Space for mobile bottom nav */
+        }
+
+        /* Navigation Bar */
+        nav {
+            background-color: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .nav-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 15px;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            color: var(--gray-700);
+            font-size: 14px;
+        }
+
+        .nav-btn.active {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        /* Main Content Layout */
+        main {
+            max-width: 1000px;
+            margin: 20px auto;
+            padding: 0 15px;
+        }
+
+        .view-section {
+            display: none;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .view-section.active {
+            display: block;
+        }
+
+        h2 {
+            margin-bottom: 20px;
+            font-size: 20px;
+            color: var(--gray-700);
+        }
+
+        /* Form Styling */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--gray-200);
+            border-radius: 6px;
+            font-size: 16px; /* Prevents auto-zoom on mobile safari */
+        }
+
+        button.btn-submit {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            width: 100%;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        /* Inventory Table / Cards */
+        .search-bar {
+            margin-bottom: 15px;
+        }
+
+        .item-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .item-card {
+            background: var(--gray-100);
+            padding: 15px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .item-info h4 {
+            font-size: 16px;
+            margin-bottom: 4px;
+        }
+
+        .item-info p {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .stock-controls {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .qty-btn {
+            background: white;
+            border: 1px solid var(--gray-200);
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .stock-val {
+            font-weight: 600;
+            min-width: 25px;
+            text-align: center;
+        }
+
+        /* Invoice Sheet Layout */
+        .invoice-creator-split {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+
+        @media (min-width: 768px) {
+            .invoice-creator-split {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        .invoice-preview-container {
+            border: 1px dashed #cbd5e1;
+            padding: 20px;
+            border-radius: 8px;
+            background: #fff;
+        }
+
+        .invoice-paper {
+            background: white;
+            color: black;
+        }
+
+        .invoice-header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 2px solid #334155;
+            padding-bottom: 15px;
+            margin-bottom: 15px;
+        }
+
+        .invoice-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 15px;
+        }
+
+        .invoice-table th {
+            text-align: left;
+            border-bottom: 1px solid #000;
+            padding: 8px 0;
+        }
+
+        .invoice-table td {
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .invoice-total-row {
+            text-align: right;
+            font-weight: bold;
+            font-size: 18px;
+            margin-top: 15px;
+        }
+
+        /* Mobile Bottom Menu Fix */
+        @media (max-width: 600px) {
+            nav {
+                position: fixed;
+                bottom: 0;
+                top: auto;
+                width: 100%;
+                box-shadow: 0 -1px 3px rgba(0,0,0,0.1);
+            }
+            body {
+                padding-top: 10px;
+                padding-bottom: 80px;
+            }
+            .nav-container {
+                padding: 10px;
+            }
+            .nav-links {
+                width: 100%;
+                justify-content: space-around;
+            }
+        }
+
+        /* Print Override styles */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            .invoice-paper, .invoice-paper * {
+                visibility: visible;
+            }
+            .invoice-paper {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="nav-container">
+            <div class="nav-links">
+                <button class="nav-btn active" onclick="switchTab('inventory')">Inventory</button>
+                <button class="nav-btn" onclick="switchTab('add-item')">+ Add Item</button>
+                <button class="nav-btn" onclick="switchTab('invoice')">🧾 Invoice</button>
+            </div>
+        </div>
+    </nav>
+
+    <main>
+        <!-- Tab 1: View Inventory -->
+        <section id="inventory-sec" class="view-section active">
+            <h2>Current Stock</h2>
+            <input type="text" id="search-input" class="search-bar" placeholder="🔍 Search items..." oninput="renderInventory()">
+            <div id="inventory-list" class="item-list"></div>
+        </section>
+
+        <!-- Tab 2: Add Item -->
+        <section id="add-item-sec" class="view-section">
+            <h2>Add New Stock Item</h2>
+            <form id="add-item-form" onsubmit="handleAddItem(event)">
+                <div class="form-group">
+                    <label>Item Name</label>
+                    <input type="text" id="prod-name" required placeholder="e.g., Wireless Mouse">
+                </div>
+                <div class="form-group">
+                    <label>Price ($)</label>
+                    <input type="number" id="prod-price" step="0.01" required placeholder="0.00">
+                </div>
+                <div class="form-group">
+                    <label>Initial Stock Qty</label>
+                    <input type="number" id="prod-stock" required placeholder="0">
+                </div>
+                <button type="submit" class="btn-submit">Save Item</button>
+            </form>
+        </section>
+
+        <!-- Tab 3: Create Invoice -->
+        <section id="invoice-sec" class="view-section">
+            <h2>Generate Invoice</h2>
+            <div class="invoice-creator-split">
+                <div>
+                    <h3>Add Item to Bill</h3>
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label>Select Item</label>
+                        <select id="invoice-item-select"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Quantity</label>
+                        <input type="number" id="invoice-qty" value="1" min="1">
+                    </div>
+                    <button class="btn-submit" onclick="addItemToInvoice()" style="background-color: var(--success); margin-bottom: 20px;">Add to Bill</button>
+                    <button class="btn-submit" onclick="window.print()" style="background-color: var(--gray-700)">Print / Save PDF</button>
+                </div>
+
+                <div class="invoice-preview-container">
+                    <div class="invoice-paper" id="invoice-paper">
+                        <div class="invoice-header">
+                            <div>
+                                <h2>INVOICE</h2>
+                                <p style="font-size: 12px; color: #666;" id="invoice-date"></p>
+                            </div>
+                            <div style="text-align: right;">
+                                <strong>My Store Inc.</strong>
+                            </div>
+                        </div>
+                        <table class="invoice-table">
+                            <thead>
+                                <tr>
+                                    <th>Item</th>
+                                    <th>Qty</th>
+                                    <th>Price</th>
+                                    <th style="text-align: right;">Total</th>
+                                </tr>
+                            </thead>
+                            <tbody id="invoice-items-body">
+                                <!-- Dynamic rows go here -->
+                            </tbody>
+                        </table>
+                        <div class="invoice-total-row">
+                            Total Due: $<span id="invoice-total-val">0.00</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <script>
+        // Sample baseline starter data
+        let inventory = [
+            { id: 1, name: "Sample Item A", price: 10.00, stock: 25 },
+            { id: 2, name: "Sample Item B", price: 45.50, stock: 7 }
+        ];
+
+        let invoiceItems = [];
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+            
+            if(tabId === 'inventory') {
+                document.querySelectorAll('.nav-btn')[0].classList.add('active');
+                document.getElementById('inventory-sec').classList.add('active');
+            } else if (tabId === 'add-item') {
+                document.querySelectorAll('.nav-btn')[1].classList.add('active');
+                document.getElementById('add-item-sec').classList.add('active');
+            } else {
+                document.querySelectorAll('.nav-btn')[2].classList.add('active');
+                document.getElementById('invoice-sec').classList.add('active');
+                setupInvoiceSelect();
+                document.getElementById('invoice-date').innerText = new Date().toLocaleDateString();
+            }
+        }
+
+        function renderInventory() {
+            const list = document.getElementById('inventory-list');
+            const search = document.getElementById('search-input').value.toLowerCase();
+            list.innerHTML = '';
+
+            inventory.filter(item => item.name.toLowerCase().includes(search)).forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'item-card';
+                card.innerHTML = `
+                    <div class="item-info">
+                        <h4>${item.name}</h4>
+                        <p>$${item.price.toFixed(2)} each</p>
+                    </div>
+                    <div class="stock-controls">
+                        <button class="qty-btn" onclick="changeStock(${item.id}, -1)">-</button>
+                        <span class="stock-val">${item.stock}</span>
+                        <button class="qty-btn" onclick="changeStock(${item.id}, 1)">+</button>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        function changeStock(id, amount) {
+            const item = inventory.find(i => i.id === id);
+            if (item) {
+                item.stock = Math.max(0, item.stock + amount);
+                renderInventory();
+            }
+        }
+
+        function handleAddItem(e) {
+            e.preventDefault();
+            const name = document.getElementById('prod-name').value;
+            const price = parseFloat(document.getElementById('prod-price').value);
+            const stock = parseInt(document.getElementById('prod-stock').value);
+
+            inventory.push({ id: Date.now(), name, price, stock });
+            document.getElementById('add-item-form').reset();
+            
+            switchTab('inventory');
+            renderInventory();
+        }
+
+        function setupInvoiceSelect() {
+            const select = document.getElementById('invoice-item-select');
+            select.innerHTML = '';
+            inventory.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = `${item.name} ($${item.price.toFixed(2)})`;
+                select.appendChild(opt);
+            });
+        }
+
+        function addItemToInvoice() {
+            const select = document.getElementById('invoice-item-select');
+            if(!select.value) return;
+            
+            const itemId = parseInt(select.value);
+            const qty = parseInt(document.getElementById('invoice-qty').value);
+            const item = inventory.find(i => i.id === itemId);
+
+            if(item) {
+                invoiceItems.push({ name: item.name, price: item.price, qty: qty });
+                renderInvoicePreview();
+            }
+        }
+
+        function renderInvoicePreview() {
+            const tbody = document.getElementById('invoice-items-body');
+            tbody.innerHTML = '';
+            let total = 0;
+
+            invoiceItems.forEach(item => {
+                const subtotal = item.price * item.qty;
+                total += subtotal;
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${item.name}</td>
+                    <td>${item.qty}</td>
+                    <td>$${item.price.toFixed(2)}</td>
+                    <td style="text-align: right;">$${subtotal.toFixed(2)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('invoice-total-val').innerText = total.toFixed(2);
+        }
+
+        // Run on initial page load
+        renderInventory();
+    </script>
+</body>
+</html>
