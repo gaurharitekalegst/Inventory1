@@ -358,7 +358,6 @@
     </main>
 
     <script>
-        // Your customized MockAPI URL link
         const CLOUD_URL = "https://6a50a0ffc576c846dcb9a9f4.mockapi.io/inventory";
 
         let inventory = [];
@@ -459,15 +458,22 @@
 
             updateStatus("💾 Saving...", "#fef9c3", "#854d0e");
             
-            // Wait for the cloud server to actually finish saving the resource!
-            await fetch(CLOUD_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, price, stock })
-            });
-
-            document.getElementById('add-item-form').reset();
-            switchTab('inventory');
+            try {
+                // Wait for the cloud server to complete the POST request
+                await fetch(CLOUD_URL, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name, price, stock })
+                });
+                
+                document.getElementById('add-item-form').reset();
+                
+                // Fetch the fresh list and render it BEFORE switching views
+                await loadCloudData();
+                switchTab('inventory');
+            } catch (error) {
+                updateStatus("❌ Save Error", "#fee2e2", "#b91c1c");
+            }
         }
 
         function setupInvoiceSelect() {
