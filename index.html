@@ -290,7 +290,7 @@
         <section id="inventory-sec" class="view-section active">
             <h2>Current Stock <span id="sync-status" class="sync-badge">Syncing...</span></h2>
             <input type="text" id="search-input" class="search-bar" placeholder="🔍 Search items..." oninput="renderInventory()">
-            <div id="inventory-list" class="item-list">Loading inventory tracking grid...</div>
+            <div id="inventory-list" class="item-list">Loading alignment grid...</div>
         </section>
 
         <section id="add-item-sec" class="view-section">
@@ -358,6 +358,7 @@
     </main>
 
     <script>
+        // Correct bridge link loaded cleanly
         const CLOUD_URL = "https://6a50a0ffc576c846dcb9a9f3.mockapi.io/inventory";
 
         let inventory = [];
@@ -459,7 +460,6 @@
             updateStatus("💾 Saving...", "#fef9c3", "#854d0e");
             
             try {
-                // Wait for the cloud server to complete the POST request
                 await fetch(CLOUD_URL, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -467,8 +467,6 @@
                 });
                 
                 document.getElementById('add-item-form').reset();
-                
-                // Fetch the fresh list and render it BEFORE switching views
                 await loadCloudData();
                 switchTab('inventory');
             } catch (error) {
