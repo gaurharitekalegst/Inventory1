@@ -290,7 +290,7 @@
         <section id="inventory-sec" class="view-section active">
             <h2>Current Stock <span id="sync-status" class="sync-badge">Syncing...</span></h2>
             <input type="text" id="search-input" class="search-bar" placeholder="🔍 Search items..." oninput="renderInventory()">
-            <div id="inventory-list" class="item-list">Loading alignment grid...</div>
+            <div id="inventory-list" class="item-list">Loading inventory tracking grid...</div>
         </section>
 
         <section id="add-item-sec" class="view-section">
@@ -358,7 +358,7 @@
     </main>
 
     <script>
-        // Your customized MockAPI bridge URL
+        // Your customized MockAPI URL link
         const CLOUD_URL = "https://6a50a0ffc576c846dcb9a9f4.mockapi.io/inventory";
 
         let inventory = [];
@@ -410,7 +410,7 @@
             const search = document.getElementById('search-input').value.toLowerCase();
             list.innerHTML = '';
 
-            const filtered = inventory.filter(item => item.name.toLowerCase().includes(search));
+            const filtered = inventory.filter(item => item.name && item.name.toLowerCase().includes(search));
             if (filtered.length === 0) {
                 list.innerHTML = '<p style="color: #6b7280; text-align: center; padding: 20px;">No items found. Add items to mirror them.</p>';
                 return;
@@ -422,11 +422,11 @@
                 card.innerHTML = `
                     <div class="item-info">
                         <h4>${item.name}</h4>
-                        <p>${parseFloat(item.price).toFixed(2)} each</p>
+                        <p>$${parseFloat(item.price || 0).toFixed(2)} each</p>
                     </div>
                     <div class="stock-controls">
                         <button class="qty-btn" onclick="changeStock('${item.id}', -1)">-</button>
-                        <span class="stock-val">${item.stock}</span>
+                        <span class="stock-val">${item.stock || 0}</span>
                         <button class="qty-btn" onclick="changeStock('${item.id}', 1)">+</button>
                     </div>
                 `;
@@ -437,7 +437,7 @@
         async function changeStock(id, amount) {
             const item = inventory.find(i => i.id === id);
             if (item) {
-                const newStock = Math.max(0, parseInt(item.stock) + amount);
+                const newStock = Math.max(0, parseInt(item.stock || 0) + amount);
                 item.stock = newStock;
                 renderInventory();
                 
@@ -458,7 +458,9 @@
             const stock = parseInt(document.getElementById('prod-stock').value);
 
             updateStatus("💾 Saving...", "#fef9c3", "#854d0e");
-            const res = await fetch(CLOUD_URL, {
+            
+            // Wait for the cloud server to actually finish saving the resource!
+            await fetch(CLOUD_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name, price, stock })
@@ -474,7 +476,7 @@
             inventory.forEach(item => {
                 const opt = document.createElement('option');
                 opt.value = item.id;
-                opt.textContent = `${item.name} (${parseFloat(item.price).toFixed(2)})`;
+                opt.textContent = `${item.name} ($${parseFloat(item.price || 0).toFixed(2)})`;
                 select.appendChild(opt);
             });
         }
@@ -488,7 +490,7 @@
             const item = inventory.find(i => i.id === itemId);
 
             if(item) {
-                invoiceItems.push({ name: item.name, price: item.price, qty: qty });
+                invoiceItems.push({ name: item.name, price: (item.price || 0), qty: qty });
                 renderInvoicePreview();
             }
         }
@@ -502,7 +504,7 @@
                 const subtotal = item.price * item.qty;
                 total += subtotal;
                 const row = document.createElement('tr');
-                row.innerHTML = `<td>${item.name}</td><td>${item.qty}</td><td>${parseFloat(item.price).toFixed(2)}</td><td style="text-align: right;">${subtotal.toFixed(2)}</td>`;
+                row.innerHTML = `<td>${item.name}</td><td>${item.qty}</td><td>$${parseFloat(item.price).toFixed(2)}</td><td style="text-align: right;">$${subtotal.toFixed(2)}</td>`;
                 tbody.appendChild(row);
             });
             document.getElementById('invoice-total-val').innerText = total.toFixed(2);
