@@ -244,7 +244,6 @@
             padding: 10px;
         }
 
-        /* Centered Invoice Branding Layout */
         .invoice-branding {
             text-align: center;
             margin-bottom: 20px;
@@ -380,7 +379,6 @@
 
                 <div class="invoice-preview-container">
                     <div class="invoice-paper" id="invoice-paper">
-                        <!-- Custom branding header block -->
                         <div class="invoice-branding">
                             <img src="logo.png" alt="ISKCON Logo" class="invoice-center-logo" onerror="this.style.display='none'">
                             <div class="invoice-store-title">Matchless Gift</div>
@@ -414,7 +412,8 @@
     </main>
 
     <script>
-        const CLOUD_URL = "https://6a50a0ffc576c846dcb9a9f3.mockapi.io/inventory";
+        // Connected directly to your live Firebase link
+        const DATABASE_URL = "https://matchless-gift-inventory-default-rtdb.firebaseio.com/";
 
         let inventory = [];
         let invoiceItems = [];
@@ -422,13 +421,23 @@
         async function loadCloudData() {
             updateStatus("🔄 Syncing...", "#e2e8f0", "#475569");
             try {
-                const res = await fetch(CLOUD_URL);
-                inventory = await res.json();
+                const res = await fetch(`${DATABASE_URL}inventory.json`);
+                const data = await res.json();
+                
+                inventory = [];
+                if (data) {
+                    Object.keys(data).forEach(key => {
+                        if(data[key]) {
+                            inventory.push({ id: key, ...data[key] });
+                        }
+                    });
+                }
+                
                 renderInventory();
                 updateStatus("✅ Aligned", "#dcfce7", "#15803d");
             } catch (e) {
                 updateStatus("❌ Sync Error", "#fee2e2", "#b91c1c");
-                document.getElementById('inventory-list').innerHTML = '<p style="color:red; text-align:center;">API configuration incomplete.</p>';
+                document.getElementById('inventory-list').innerHTML = '<p style="color:red; text-align:center;">Firebase address or security rules conflict.</p>';
             }
         }
 
@@ -467,7 +476,7 @@
 
             const filtered = inventory.filter(item => item.name && item.name.toLowerCase().includes(search));
             if (filtered.length === 0) {
-                list.innerHTML = '<p style="color: #6b7280; text-align: center; padding: 20px;">No items found. Add items to mirror them.</p>';
+                list.innerHTML = '<p style="color: #6b7280; text-align: center; padding: 20px;">No items found. Tap "+ Add Item" to populate stock.</p>';
                 return;
             }
 
@@ -500,8 +509,8 @@
                 renderInventory();
                 
                 updateStatus("💾 Saving...", "#fef9c3", "#854d0e");
-                await fetch(`${CLOUD_URL}/${id}`, {
-                    method: "PUT",
+                await fetch(`${DATABASE_URL}inventory/${id}.json`, {
+                    method: "PATCH",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ stock: newStock })
                 });
@@ -514,7 +523,7 @@
             try {
                 inventory = inventory.filter(i => i.id !== id);
                 renderInventory();
-                await fetch(`${CLOUD_URL}/${id}`, { method: "DELETE" });
+                await fetch(`${DATABASE_URL}inventory/${id}.json`, { method: "DELETE" });
                 updateStatus("✅ Aligned", "#dcfce7", "#15803d");
             } catch (error) {
                 updateStatus("❌ Delete Error", "#fee2e2", "#b91c1c");
@@ -530,7 +539,7 @@
             updateStatus("💾 Saving...", "#fef9c3", "#854d0e");
             
             try {
-                await fetch(CLOUD_URL, {
+                await fetch(`${DATABASE_URL}inventory.json`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ name, price, stock })
