@@ -46,7 +46,6 @@
             padding: 10px 15px;
         }
 
-        /* Logo Layout Styling */
         .logo-area {
             display: flex;
             align-items: center;
@@ -54,7 +53,7 @@
         }
 
         .app-logo {
-            height: 35px; /* Adjust this number to make your logo bigger or smaller */
+            height: 35px;
             width: auto;
             object-fit: contain;
         }
@@ -257,16 +256,10 @@
         }
 
         @media (max-width: 600px) {
-            nav {
-                position: fixed;
-                bottom: 0;
-                top: auto;
-                width: 100%;
-                box-shadow: 0 -1px 3px rgba(0,0,0,0.1);
-            }
+            nav { position: fixed; bottom: 0; top: auto; width: 100%; box-shadow: 0 -1px 3px rgba(0,0,0,0.1); }
             body { padding-top: 10px; padding-bottom: 80px; }
-            .nav-container { padding: 10px; flex-direction: row; justify-content: space-between; }
-            .logo-area { display: none; } /* Hides logo text on small phone views to save button workspace */
+            .nav-container { padding: 10px; }
+            .logo-area { display: none; }
             .nav-links { width: 100%; justify-content: space-around; }
         }
 
@@ -281,12 +274,10 @@
 
     <nav>
         <div class="nav-container">
-            <!-- Logo Section -->
             <div class="logo-area">
                 <img src="logo.png" alt="Logo" class="app-logo" onerror="this.style.display='none'">
                 <span class="brand-name">Stock Manager</span>
             </div>
-            
             <div class="nav-links">
                 <button class="nav-btn active" onclick="switchTab('inventory')">Inventory</button>
                 <button class="nav-btn" onclick="switchTab('add-item')">+ Add Item</button>
@@ -299,7 +290,7 @@
         <section id="inventory-sec" class="view-section active">
             <h2>Current Stock <span id="sync-status" class="sync-badge">Syncing...</span></h2>
             <input type="text" id="search-input" class="search-bar" placeholder="🔍 Search items..." oninput="renderInventory()">
-            <div id="inventory-list" class="item-list">Loading data from cloud...</div>
+            <div id="inventory-list" class="item-list">Loading alignment grid...</div>
         </section>
 
         <section id="add-item-sec" class="view-section">
@@ -367,10 +358,8 @@
     </main>
 
     <script>
-        // --- ADD YOUR BIN LINK HERE ---
-        const BIN_URL = "https://api.jsonbin.io/v3/b/YOUR_BIN_ID_HERE";
-        const API_KEY = "$2b$10$YOUR_MASTER_KEY_HERE";
-        // ------------------------------
+        // Your customized MockAPI bridge URL
+        const CLOUD_URL = "https://6a50a0ffc576c846dcb9a9f4.mockapi.io/inventory";
 
         let inventory = [];
         let invoiceItems = [];
@@ -378,32 +367,13 @@
         async function loadCloudData() {
             updateStatus("🔄 Syncing...", "#e2e8f0", "#475569");
             try {
-                const res = await fetch(BIN_URL + "/latest", {
-                    headers: { "X-Master-Key": API_KEY }
-                });
-                const data = await res.json();
-                inventory = data.record || [];
+                const res = await fetch(CLOUD_URL);
+                inventory = await res.json();
                 renderInventory();
-                updateStatus("✅ Connected", "#dcfce7", "#15803d");
-            } catch (e) {
-                updateStatus("❌ Sync Error", "#fee2e2", "#b91c1c");
-            }
-        }
-
-        async function saveCloudData() {
-            updateStatus("💾 Saving...", "#fef9c3", "#854d0e");
-            try {
-                await fetch(BIN_URL, {
-                    method: "PUT",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-Master-Key": API_KEY
-                    },
-                    body: JSON.stringify(inventory)
-                });
                 updateStatus("✅ Aligned", "#dcfce7", "#15803d");
             } catch (e) {
-                updateStatus("❌ Save Error", "#fee2e2", "#b91c1c");
+                updateStatus("❌ Sync Error", "#fee2e2", "#b91c1c");
+                document.getElementById('inventory-list').innerHTML = '<p style="color:red; text-align:center;">API configuration incomplete.</p>';
             }
         }
 
@@ -442,7 +412,7 @@
 
             const filtered = inventory.filter(item => item.name.toLowerCase().includes(search));
             if (filtered.length === 0) {
-                list.innerHTML = '<p style="color: #6b7280; text-align: center; padding: 20px;">No items found.</p>';
+                list.innerHTML = '<p style="color: #6b7280; text-align: center; padding: 20px;">No items found. Add items to mirror them.</p>';
                 return;
             }
 
@@ -452,12 +422,12 @@
                 card.innerHTML = `
                     <div class="item-info">
                         <h4>${item.name}</h4>
-                        <p>$${parseFloat(item.price).toFixed(2)} each</p>
+                        <p>${parseFloat(item.price).toFixed(2)} each</p>
                     </div>
                     <div class="stock-controls">
-                        <button class="qty-btn" onclick="changeStock(${item.id}, -1)">-</button>
+                        <button class="qty-btn" onclick="changeStock('${item.id}', -1)">-</button>
                         <span class="stock-val">${item.stock}</span>
-                        <button class="qty-btn" onclick="changeStock(${item.id}, 1)">+</button>
+                        <button class="qty-btn" onclick="changeStock('${item.id}', 1)">+</button>
                     </div>
                 `;
                 list.appendChild(card);
@@ -467,9 +437,17 @@
         async function changeStock(id, amount) {
             const item = inventory.find(i => i.id === id);
             if (item) {
-                item.stock = Math.max(0, item.stock + amount);
+                const newStock = Math.max(0, parseInt(item.stock) + amount);
+                item.stock = newStock;
                 renderInventory();
-                await saveCloudData();
+                
+                updateStatus("💾 Saving...", "#fef9c3", "#854d0e");
+                await fetch(`${CLOUD_URL}/${id}`, {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ stock: newStock })
+                });
+                updateStatus("✅ Aligned", "#dcfce7", "#15803d");
             }
         }
 
@@ -479,11 +457,15 @@
             const price = parseFloat(document.getElementById('prod-price').value);
             const stock = parseInt(document.getElementById('prod-stock').value);
 
-            inventory.push({ id: Date.now(), name, price, stock });
-            
+            updateStatus("💾 Saving...", "#fef9c3", "#854d0e");
+            const res = await fetch(CLOUD_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, price, stock })
+            });
+
             document.getElementById('add-item-form').reset();
             switchTab('inventory');
-            await saveCloudData();
         }
 
         function setupInvoiceSelect() {
@@ -492,7 +474,7 @@
             inventory.forEach(item => {
                 const opt = document.createElement('option');
                 opt.value = item.id;
-                opt.textContent = `${item.name} ($${parseFloat(item.price).toFixed(2)})`;
+                opt.textContent = `${item.name} (${parseFloat(item.price).toFixed(2)})`;
                 select.appendChild(opt);
             });
         }
@@ -501,7 +483,7 @@
             const select = document.getElementById('invoice-item-select');
             if(!select.value) return;
             
-            const itemId = parseInt(select.value);
+            const itemId = select.value;
             const qty = parseInt(document.getElementById('invoice-qty').value);
             const item = inventory.find(i => i.id === itemId);
 
@@ -520,7 +502,7 @@
                 const subtotal = item.price * item.qty;
                 total += subtotal;
                 const row = document.createElement('tr');
-                row.innerHTML = `<td>${item.name}</td><td>${item.qty}</td><td>$${item.price.toFixed(2)}</td><td style="text-align: right;">$${subtotal.toFixed(2)}</td>`;
+                row.innerHTML = `<td>${item.name}</td><td>${item.qty}</td><td>${parseFloat(item.price).toFixed(2)}</td><td style="text-align: right;">${subtotal.toFixed(2)}</td>`;
                 tbody.appendChild(row);
             });
             document.getElementById('invoice-total-val').innerText = total.toFixed(2);
