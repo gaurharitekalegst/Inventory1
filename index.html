@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Synced Inventory Manager</title>
+    <title>Protected Inventory Manager</title>
     <style>
         :root {
             --primary: #2563eb;
@@ -27,6 +27,63 @@
             background-color: #f8fafc;
             color: var(--text);
             padding-bottom: 60px;
+        }
+
+        /* Login Overlay Styles */
+        #login-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #f1f5f9;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .login-box {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .login-logo {
+            height: 70px;
+            width: auto;
+            margin-bottom: 15px;
+            object-fit: contain;
+        }
+
+        .login-box h2 {
+            margin-bottom: 10px;
+            color: var(--gray-700);
+            font-size: 22px;
+        }
+
+        .login-box p {
+            font-size: 14px;
+            color: #64748b;
+            margin-bottom: 20px;
+        }
+
+        .error-msg {
+            color: var(--danger);
+            font-size: 14px;
+            margin-top: 10px;
+            display: none;
+            font-weight: 500;
+        }
+
+        /* App Layout Styles */
+        #app-content {
+            display: none; /* Hidden until correct login */
         }
 
         nav {
@@ -319,106 +376,156 @@
 </head>
 <body>
 
-    <nav>
-        <div class="nav-container">
-            <div class="logo-area">
-                <img src="logo.png" alt="Logo" class="app-logo" onerror="this.style.display='none'">
-                <span class="brand-name">Stock Manager</span>
-            </div>
-            <div class="nav-links">
-                <button class="nav-btn active" onclick="switchTab('inventory')">Inventory</button>
-                <button class="nav-btn" onclick="switchTab('add-item')">+ Add Item</button>
-                <button class="nav-btn" onclick="switchTab('invoice')">🧾 Invoice</button>
-            </div>
-        </div>
-    </nav>
-
-    <main>
-        <section id="inventory-sec" class="view-section active">
-            <h2>Current Stock <span id="sync-status" class="sync-badge">Syncing...</span></h2>
-            <input type="text" id="search-input" class="search-bar" placeholder="🔍 Search items..." oninput="renderInventory()">
-            <div id="inventory-list" class="item-list">Loading inventory tracking grid...</div>
-        </section>
-
-        <section id="add-item-sec" class="view-section">
-            <h2>Add New Stock Item</h2>
-            <form id="add-item-form" onsubmit="handleAddItem(event)">
+    <!-- Access Control Screen Overlay -->
+    <div id="login-overlay">
+        <div class="login-box">
+            <img src="logo.png" alt="Logo" class="login-logo" onerror="this.style.display='none'">
+            <h2>Matchless Gift</h2>
+            <p>Inventory Dashboard Authentication</p>
+            <form onsubmit="handleLogin(event)">
                 <div class="form-group">
-                    <label>Item Name</label>
-                    <input type="text" id="prod-name" required>
+                    <input type="password" id="login-pass" placeholder="Enter Access Password" required autocomplete="current-password">
                 </div>
-                <div class="form-group">
-                    <label>Price</label>
-                    <input type="number" id="prod-price" step="0.01" required>
-                </div>
-                <div class="form-group">
-                    <label>Initial Stock Qty</label>
-                    <input type="number" id="prod-stock" required>
-                </div>
-                <button type="submit" class="btn-submit">Save Item</button>
+                <button type="submit" class="btn-submit">Unlock System</button>
+                <div id="login-error" class="error-msg">Incorrect access code. Try again.</div>
             </form>
-        </section>
+        </div>
+    </div>
 
-        <section id="invoice-sec" class="view-section">
-            <h2>Generate Invoice</h2>
-            <div class="invoice-creator-split">
-                <div>
-                    <h3>Add Item to Bill</h3>
-                    <div class="form-group" style="margin-top: 10px;">
-                        <label>Select Item</label>
-                        <select id="invoice-item-select"></select>
+    <!-- Live Protected Content Layout Wrapper -->
+    <div id="app-content">
+        <nav>
+            <div class="nav-container">
+                <div class="logo-area">
+                    <img src="logo.png" alt="Logo" class="app-logo" onerror="this.style.display='none'">
+                    <span class="brand-name">Stock Manager</span>
+                </div>
+                <div class="nav-links">
+                    <button class="nav-btn active" onclick="switchTab('inventory')">Inventory</button>
+                    <button class="nav-btn" onclick="switchTab('add-item')">+ Add Item</button>
+                    <button class="nav-btn" onclick="switchTab('invoice')">🧾 Invoice</button>
+                </div>
+            </div>
+        </nav>
+
+        <main>
+            <section id="inventory-sec" class="view-section active">
+                <h2>Current Stock <span id="sync-status" class="sync-badge">Syncing...</span></h2>
+                <input type="text" id="search-input" class="search-bar" placeholder="🔍 Search items..." oninput="renderInventory()">
+                <div id="inventory-list" class="item-list">Loading inventory tracking grid...</div>
+            </section>
+
+            <section id="add-item-sec" class="view-section">
+                <h2>Add New Stock Item</h2>
+                <form id="add-item-form" onsubmit="handleAddItem(event)">
+                    <div class="form-group">
+                        <label>Item Name</label>
+                        <input type="text" id="prod-name" required>
                     </div>
                     <div class="form-group">
-                        <label>Quantity</label>
-                        <input type="number" id="invoice-qty" value="1" min="1">
+                        <label>Price</label>
+                        <input type="number" id="prod-price" step="0.01" required>
                     </div>
-                    <button class="btn-submit" onclick="addItemToInvoice()" style="background-color: var(--success); margin-bottom: 20px;">Add to Bill</button>
-                    <button class="btn-submit" onclick="window.print()" style="background-color: var(--gray-700)">Print / Save PDF</button>
-                    <button class="btn-submit" onclick="clearInvoice()" style="background-color: var(--danger); margin-top:10px;">Clear Invoice</button>
-                </div>
+                    <div class="form-group">
+                        <label>Initial Stock Qty</label>
+                        <input type="number" id="prod-stock" required>
+                    </div>
+                    <button type="submit" class="btn-submit">Save Item</button>
+                </form>
+            </section>
 
-                <div class="invoice-preview-container">
-                    <div class="invoice-paper" id="invoice-paper">
-                        <div class="invoice-branding">
-                            <img src="logo.png" alt="ISKCON Logo" class="invoice-center-logo" onerror="this.style.display='none'">
-                            <div class="invoice-store-title">Matchless Gift</div>
+            <section id="invoice-sec" class="view-section">
+                <h2>Generate Invoice</h2>
+                <div class="invoice-creator-split">
+                    <div>
+                        <h3>Add Item to Bill</h3>
+                        <div class="form-group" style="margin-top: 10px;">
+                            <label>Select Item</label>
+                            <select id="invoice-item-select"></select>
                         </div>
+                        <div class="form-group">
+                            <label>Quantity</label>
+                            <input type="number" id="invoice-qty" value="1" min="1">
+                        </div>
+                        <button class="btn-submit" onclick="addItemToInvoice()" style="background-color: var(--success); margin-bottom: 20px;">Add to Bill</button>
+                        <button class="btn-submit" onclick="window.print()" style="background-color: var(--gray-700)">Print / Save PDF</button>
+                        <button class="btn-submit" onclick="clearInvoice()" style="background-color: var(--danger); margin-top:10px;">Clear Invoice</button>
+                    </div>
 
-                        <div class="invoice-header">
-                            <div>
-                                <h3 style="font-size: 14px; color: #475569; letter-spacing: 1px;">INVOICE RECORD</h3>
-                                <p style="font-size: 12px; color: #666; margin-top: 2px;" id="invoice-date"></p>
+                    <div class="invoice-preview-container">
+                        <div class="invoice-paper" id="invoice-paper">
+                            <div class="invoice-branding">
+                                <img src="logo.png" alt="ISKCON Logo" class="invoice-center-logo" onerror="this.style.display='none'">
+                                <div class="invoice-store-title">Matchless Gift</div>
                             </div>
-                            <div style="text-align: right; font-size: 12px; color: #475569;">
-                                <p>Spiritual Books & Articles</p>
+
+                            <div class="invoice-header">
+                                <div>
+                                    <h3 style="font-size: 14px; color: #475569; letter-spacing: 1px;">INVOICE RECORD</h3>
+                                    <p style="font-size: 12px; color: #666; margin-top: 2px;" id="invoice-date"></p>
+                                </div>
+                                <div style="text-align: right; font-size: 12px; color: #475569;">
+                                    <p>Spiritual Books & Articles</p>
+                                </div>
                             </div>
+                            <table class="invoice-table">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th>Qty</th>
+                                        <th>Price</th>
+                                        <th style="text-align: right;">Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="invoice-items-body"></tbody>
+                            </table>
+                            <div class="invoice-total-row">Total Due: <span id="invoice-total-val">0.00</span></div>
                         </div>
-                        <table class="invoice-table">
-                            <thead>
-                                <tr>
-                                    <th>Item</th>
-                                    <th>Qty</th>
-                                    <th>Price</th>
-                                    <th style="text-align: right;">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody id="invoice-items-body"></tbody>
-                        </table>
-                        <div class="invoice-total-row">Total Due: <span id="invoice-total-val">0.00</span></div>
                     </div>
                 </div>
-            </div>
-        </section>
-    </main>
+            </section>
+        </main>
+    </div>
 
     <script>
-        // Connected directly to your live Firebase link
+        // --- LIVE APP PARAMS ---
         const DATABASE_URL = "https://matchless-gift-inventory-default-rtdb.firebaseio.com/";
+        
+        // 🔒 CHANGE YOUR PASSWORD HERE
+        const MASTER_PASSWORD = "iskcon108"; 
+        // ------------------------
 
         let inventory = [];
         let invoiceItems = [];
 
+        // Check if user previously logged in this browser session
+        if (sessionStorage.getItem("is_auth") === "true") {
+            document.getElementById("login-overlay").style.display = "none";
+            document.getElementById("app-content").style.display = "block";
+            loadCloudData();
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const enteredPass = document.getElementById("login-pass").value;
+            const errorBanner = document.getElementById("login-error");
+
+            if (enteredPass === MASTER_PASSWORD) {
+                errorBanner.style.display = "none";
+                sessionStorage.setItem("is_auth", "true");
+                
+                // Hide verification screen and clear path to app space
+                document.getElementById("login-overlay").style.display = "none";
+                document.getElementById("app-content").style.display = "block";
+                loadCloudData();
+            } else {
+                errorBanner.style.display = "block";
+                document.getElementById("login-pass").value = "";
+            }
+        }
+
         async function loadCloudData() {
+            if (sessionStorage.getItem("is_auth") !== "true") return;
             updateStatus("🔄 Syncing...", "#e2e8f0", "#475569");
             try {
                 const res = await fetch(`${DATABASE_URL}inventory.json`);
@@ -437,7 +544,6 @@
                 updateStatus("✅ Aligned", "#dcfce7", "#15803d");
             } catch (e) {
                 updateStatus("❌ Sync Error", "#fee2e2", "#b91c1c");
-                document.getElementById('inventory-list').innerHTML = '<p style="color:red; text-align:center;">Firebase address or security rules conflict.</p>';
             }
         }
 
@@ -594,8 +700,6 @@
         }
 
         function clearInvoice() { invoiceItems = []; renderInvoicePreview(); }
-
-        loadCloudData();
     </script>
 </body>
 </html>
