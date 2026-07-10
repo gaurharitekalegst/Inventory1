@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Local Inventory & Invoice Manager</title>
+    <title>Synced Inventory Manager</title>
     <style>
         :root {
             --primary: #2563eb;
@@ -43,18 +43,37 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 15px;
+            padding: 10px 15px;
+        }
+
+        /* Logo Layout Styling */
+        .logo-area {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .app-logo {
+            height: 35px; /* Adjust this number to make your logo bigger or smaller */
+            width: auto;
+            object-fit: contain;
+        }
+
+        .brand-name {
+            font-weight: 700;
+            font-size: 16px;
+            color: var(--gray-700);
         }
 
         .nav-links {
             display: flex;
-            gap: 15px;
+            gap: 10px;
         }
 
         .nav-btn {
             background: none;
             border: none;
-            padding: 8px 16px;
+            padding: 8px 14px;
             border-radius: 6px;
             cursor: pointer;
             font-weight: 500;
@@ -173,6 +192,16 @@
             text-align: center;
         }
 
+        .sync-badge {
+            font-size: 11px;
+            background-color: #e2e8f0;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: bold;
+            color: #475569;
+            float: right;
+        }
+
         .invoice-creator-split {
             display: grid;
             grid-template-columns: 1fr;
@@ -180,9 +209,7 @@
         }
 
         @media (min-width: 768px) {
-            .invoice-creator-split {
-                grid-template-columns: 1fr 1fr;
-            }
+            .invoice-creator-split { grid-template-columns: 1fr 1fr; }
         }
 
         .invoice-preview-container {
@@ -229,17 +256,6 @@
             margin-top: 15px;
         }
 
-        .clear-btn {
-            background-color: var(--danger);
-            color: white;
-            border: none;
-            padding: 6px 12px;
-            border-radius: 4px;
-            font-size: 12px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
-
         @media (max-width: 600px) {
             nav {
                 position: fixed;
@@ -248,11 +264,9 @@
                 width: 100%;
                 box-shadow: 0 -1px 3px rgba(0,0,0,0.1);
             }
-            body {
-                padding-top: 10px;
-                padding-bottom: 80px;
-            }
-            .nav-container { padding: 10px; }
+            body { padding-top: 10px; padding-bottom: 80px; }
+            .nav-container { padding: 10px; flex-direction: row; justify-content: space-between; }
+            .logo-area { display: none; } /* Hides logo text on small phone views to save button workspace */
             .nav-links { width: 100%; justify-content: space-around; }
         }
 
@@ -267,6 +281,12 @@
 
     <nav>
         <div class="nav-container">
+            <!-- Logo Section -->
+            <div class="logo-area">
+                <img src="logo.png" alt="Logo" class="app-logo" onerror="this.style.display='none'">
+                <span class="brand-name">Stock Manager</span>
+            </div>
+            
             <div class="nav-links">
                 <button class="nav-btn active" onclick="switchTab('inventory')">Inventory</button>
                 <button class="nav-btn" onclick="switchTab('add-item')">+ Add Item</button>
@@ -276,34 +296,31 @@
     </nav>
 
     <main>
-        <!-- Tab 1: Inventory -->
         <section id="inventory-sec" class="view-section active">
-            <h2>Current Stock</h2>
+            <h2>Current Stock <span id="sync-status" class="sync-badge">Syncing...</span></h2>
             <input type="text" id="search-input" class="search-bar" placeholder="🔍 Search items..." oninput="renderInventory()">
-            <div id="inventory-list" class="item-list"></div>
+            <div id="inventory-list" class="item-list">Loading data from cloud...</div>
         </section>
 
-        <!-- Tab 2: Add Item -->
         <section id="add-item-sec" class="view-section">
             <h2>Add New Stock Item</h2>
             <form id="add-item-form" onsubmit="handleAddItem(event)">
                 <div class="form-group">
                     <label>Item Name</label>
-                    <input type="text" id="prod-name" required placeholder="e.g. Wireless Mouse">
+                    <input type="text" id="prod-name" required>
                 </div>
                 <div class="form-group">
                     <label>Price</label>
-                    <input type="number" id="prod-price" step="0.01" required placeholder="0.00">
+                    <input type="number" id="prod-price" step="0.01" required>
                 </div>
                 <div class="form-group">
                     <label>Initial Stock Qty</label>
-                    <input type="number" id="prod-stock" required placeholder="0">
+                    <input type="number" id="prod-stock" required>
                 </div>
                 <button type="submit" class="btn-submit">Save Item</button>
             </form>
         </section>
 
-        <!-- Tab 3: Invoice -->
         <section id="invoice-sec" class="view-section">
             <h2>Generate Invoice</h2>
             <div class="invoice-creator-split">
@@ -318,8 +335,8 @@
                         <input type="number" id="invoice-qty" value="1" min="1">
                     </div>
                     <button class="btn-submit" onclick="addItemToInvoice()" style="background-color: var(--success); margin-bottom: 20px;">Add to Bill</button>
-                    <button class="btn-submit" onclick="window.print()" style="background-color: var(--gray-700); margin-bottom: 10px;">Print / Save PDF</button>
-                    <button class="clear-btn" onclick="clearInvoice()">Clear Current Invoice</button>
+                    <button class="btn-submit" onclick="window.print()" style="background-color: var(--gray-700)">Print / Save PDF</button>
+                    <button class="btn-submit" onclick="clearInvoice()" style="background-color: var(--danger); margin-top:10px;">Clear Invoice</button>
                 </div>
 
                 <div class="invoice-preview-container">
@@ -350,12 +367,53 @@
     </main>
 
     <script>
-        // Direct local setup
-        let inventory = JSON.parse(localStorage.getItem('pure_local_inv_v2')) || [];
+        // --- ADD YOUR BIN LINK HERE ---
+        const BIN_URL = "https://api.jsonbin.io/v3/b/YOUR_BIN_ID_HERE";
+        const API_KEY = "$2b$10$YOUR_MASTER_KEY_HERE";
+        // ------------------------------
+
+        let inventory = [];
         let invoiceItems = [];
 
-        function saveToStorage() {
-            localStorage.setItem('pure_local_inv_v2', JSON.stringify(inventory));
+        async function loadCloudData() {
+            updateStatus("🔄 Syncing...", "#e2e8f0", "#475569");
+            try {
+                const res = await fetch(BIN_URL + "/latest", {
+                    headers: { "X-Master-Key": API_KEY }
+                });
+                const data = await res.json();
+                inventory = data.record || [];
+                renderInventory();
+                updateStatus("✅ Connected", "#dcfce7", "#15803d");
+            } catch (e) {
+                updateStatus("❌ Sync Error", "#fee2e2", "#b91c1c");
+            }
+        }
+
+        async function saveCloudData() {
+            updateStatus("💾 Saving...", "#fef9c3", "#854d0e");
+            try {
+                await fetch(BIN_URL, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Master-Key": API_KEY
+                    },
+                    body: JSON.stringify(inventory)
+                });
+                updateStatus("✅ Aligned", "#dcfce7", "#15803d");
+            } catch (e) {
+                updateStatus("❌ Save Error", "#fee2e2", "#b91c1c");
+            }
+        }
+
+        function updateStatus(text, bg, color) {
+            const badge = document.getElementById('sync-status');
+            if (badge) {
+                badge.innerText = text;
+                badge.style.backgroundColor = bg;
+                badge.style.color = color;
+            }
         }
 
         function switchTab(tabId) {
@@ -365,7 +423,7 @@
             if(tabId === 'inventory') {
                 document.querySelectorAll('.nav-btn')[0].classList.add('active');
                 document.getElementById('inventory-sec').classList.add('active');
-                renderInventory();
+                loadCloudData();
             } else if (tabId === 'add-item') {
                 document.querySelectorAll('.nav-btn')[1].classList.add('active');
                 document.getElementById('add-item-sec').classList.add('active');
@@ -384,7 +442,7 @@
 
             const filtered = inventory.filter(item => item.name.toLowerCase().includes(search));
             if (filtered.length === 0) {
-                list.innerHTML = '<p style="color: #6b7280; text-align: center; padding: 20px;">No items found. Tap "+ Add Item" to begin.</p>';
+                list.innerHTML = '<p style="color: #6b7280; text-align: center; padding: 20px;">No items found.</p>';
                 return;
             }
 
@@ -394,7 +452,7 @@
                 card.innerHTML = `
                     <div class="item-info">
                         <h4>${item.name}</h4>
-                        <p>${parseFloat(item.price).toFixed(2)} each</p>
+                        <p>$${parseFloat(item.price).toFixed(2)} each</p>
                     </div>
                     <div class="stock-controls">
                         <button class="qty-btn" onclick="changeStock(${item.id}, -1)">-</button>
@@ -406,26 +464,26 @@
             });
         }
 
-        function changeStock(id, amount) {
+        async function changeStock(id, amount) {
             const item = inventory.find(i => i.id === id);
             if (item) {
                 item.stock = Math.max(0, item.stock + amount);
-                saveToStorage();
                 renderInventory();
+                await saveCloudData();
             }
         }
 
-        function handleAddItem(e) {
+        async function handleAddItem(e) {
             e.preventDefault();
             const name = document.getElementById('prod-name').value;
             const price = parseFloat(document.getElementById('prod-price').value);
             const stock = parseInt(document.getElementById('prod-stock').value);
 
             inventory.push({ id: Date.now(), name, price, stock });
-            saveToStorage();
-
+            
             document.getElementById('add-item-form').reset();
             switchTab('inventory');
+            await saveCloudData();
         }
 
         function setupInvoiceSelect() {
@@ -434,7 +492,7 @@
             inventory.forEach(item => {
                 const opt = document.createElement('option');
                 opt.value = item.id;
-                opt.textContent = `${item.name} (${parseFloat(item.price).toFixed(2)})`;
+                opt.textContent = `${item.name} ($${parseFloat(item.price).toFixed(2)})`;
                 select.appendChild(opt);
             });
         }
@@ -462,7 +520,7 @@
                 const subtotal = item.price * item.qty;
                 total += subtotal;
                 const row = document.createElement('tr');
-                row.innerHTML = `<td>${item.name}</td><td>${item.qty}</td><td>${item.price.toFixed(2)}</td><td style="text-align: right;">${subtotal.toFixed(2)}</td>`;
+                row.innerHTML = `<td>${item.name}</td><td>${item.qty}</td><td>$${item.price.toFixed(2)}</td><td style="text-align: right;">$${subtotal.toFixed(2)}</td>`;
                 tbody.appendChild(row);
             });
             document.getElementById('invoice-total-val').innerText = total.toFixed(2);
@@ -470,8 +528,7 @@
 
         function clearInvoice() { invoiceItems = []; renderInvoicePreview(); }
 
-        // Initial launch run
-        renderInventory();
+        loadCloudData();
     </script>
 </body>
 </html>
